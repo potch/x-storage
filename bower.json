@@ -1,0 +1,20 @@
+{
+  "name": "x-storage",
+  "main": "index.js",
+  "version": "0.0.0",
+  "homepage": "https://github.com/potch/x-storage",
+  "authors": [
+    "Matt Claypotch <thepotch@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "platform": "Polymer/platform#~0.2.4"
+  }
+}
