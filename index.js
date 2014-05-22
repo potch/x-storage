@@ -49,6 +49,12 @@
 
   KeyValueStore.prototype = {
 
+    _getObjectStore: function(mode) {
+      var self = this;
+      var t = self.db.transaction(self.storeName, mode);
+      return t.objectStore(self.storeName);
+    }, 
+
     get: function (key) {
       var self = this;
       if (self._ready) {
@@ -62,9 +68,7 @@
 
     _get: function (key) {
       var self = this;
-      var storeName = self.storeName;
-      var transaction = self.db.transaction([storeName]);
-      var store = transaction.objectStore(storeName);
+      var store = self._getObjectStore()
       return new Promise(function (resolve, reject) {
         wrap(store.get(key)).then(function(row) {
           resolve(row ? row.value : undefined);
@@ -85,9 +89,7 @@
 
     _set: function (key, value) {
       var self = this;
-      var storeName = self.storeName;
-      var transaction = self.db.transaction([storeName], 'readwrite');
-      var store = transaction.objectStore(storeName);
+      var store = self._getObjectStore('readwrite');
       return wrap(store.put({ 'key': key, 'value': value }));
     },
 
@@ -104,9 +106,7 @@
 
     _remove: function (key) {
       var self = this;
-      var storeName = self.storeName;
-      var transaction = self.db.transaction([storeName], 'readwrite');
-      var store = transaction.objectStore(storeName);
+      var store = self._getObjectStore('readwrite');
       return wrap(store.delete(key));
     },
 
@@ -123,9 +123,7 @@
 
     _getAll: function() {
       var self = this;
-      var storeName = self.storeName;
-      var transaction = self.db.transaction([storeName]);
-      var store = transaction.objectStore(storeName);
+      var store = self._getObjectStore();
       var allItems = [];
       return new Promise(function(resolve,reject){
         var cursorRequest = store.openCursor();
@@ -154,9 +152,7 @@
 
     _clear: function() {
       var self = this;
-      var storeName = self.storeName;
-      var transaction = self.db.transaction([storeName], 'readwrite');
-      var store = transaction.objectStore(storeName);
+      var store = self._getObjectStore('readwrite');
       return wrap(store.clear());
     }
         
