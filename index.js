@@ -6,6 +6,9 @@
                   window.mozIndexedDB ||
                   window.webkitIndexedDB ||
                   window.msIndexedDB;
+                  
+  var IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction 
+                    || window.mozIDBTransaction || window.msIDBTransaction;
 
   function wrap(req) {
     return new Promise(function (resolve, reject) {
@@ -189,27 +192,18 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
     this.name = this.getAttribute('name') || 'storage';
     this.storage = new KeyValueStore(this.name);
   };
-
   StoragePrototype.attachedCallback = function () {
-
   };
-
   StoragePrototype.detatchedCallback = function () {
-
   };
-
   StoragePrototype.attributeChangedCallback = function (attr, oldVal, newVal) {
-
   };
-
   StoragePrototype.get = function (key) {
     return this.storage.get(key);
   };
-
   StoragePrototype.set = function (key, value) {
     return this.storage.set(key, value);
   };
-
   StoragePrototype.remove = function (key) {
     return this.storage.remove(key);
   };
