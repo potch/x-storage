@@ -51,6 +51,7 @@
 
     _getObjectStore: function(mode) {
       var self = this;
+      mode = typeof mode !== 'undefined' ? mode : 'readonly';
       var t = self.db.transaction(self.storeName, mode);
       return t.objectStore(self.storeName);
     }, 
@@ -126,6 +127,37 @@
       });
     },
 
+    getRange: function(count, startKey) {
+      var self = this;
+      return self._awaitReady(self._getRange, [count, startKey]);
+    },
+
+    _getRange: function(count, startKey) {
+      console.log(arguments);
+      var self = this;
+      var store = self._getObjectStore();
+      var allItems = [];
+      return new Promise(function(resolve,reject){
+        var index = 0;
+        if (startKey) {
+          var lowerBound = IDBKeyRange.lowerBound(startKey);
+          var cursorRequest = store.openCursor(lowerBound);
+        } else {
+          var cursorRequest = store.openCursor();
+        };
+        cursorRequest.onsuccess = function(e){
+          var cursor = e.target.result;
+          if (cursor === null || cursor === undefined || index >= count) {
+            resolve(allItems);
+          } else {
+            allItems.push(cursor.value);
+            index++;
+            cursor.continue();
+          }
+        }
+      });
+    },
+
     size: function() {
       var self = this;
       return self._awaitReady(self._size);
@@ -189,6 +221,9 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
   };
   StoragePrototype.clear = function (key) {
     return this.storage.clear();
+  };
+  StoragePrototype.getRange = function (count, startKey) {
+    return this.storage.getRange(count, startKey);
   };
 
   document.registerElement('key-value', {
