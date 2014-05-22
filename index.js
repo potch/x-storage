@@ -108,8 +108,58 @@
       var transaction = self.db.transaction([storeName], 'readwrite');
       var store = transaction.objectStore(storeName);
       return wrap(store.delete(key));
-    }
+    },
 
+    getAll: function() {
+      var self = this;
+      if (self._ready) {
+        return self._getAll();
+      } else {
+        return self.ready.then(function() {
+          return self._getAll();
+        });
+      }
+    },
+
+    _getAll: function() {
+      var self = this;
+      var storeName = self.storeName;
+      var transaction = self.db.transaction([storeName]);
+      var store = transaction.objectStore(storeName);
+      var allItems = [];
+      return new Promise(function(resolve,reject){
+        var cursorRequest = store.openCursor();
+        cursorRequest.onsuccess = function(e){
+          var cursor = e.target.result;
+          if (cursor === null || cursor === undefined) {
+            resolve(allItems);
+          } else {
+            allItems.push(cursor.value);
+            cursor.continue();
+          }
+        }
+      });
+    },
+
+    clear: function () {
+      var self = this;
+      if (self._ready) {
+        return self._clear();
+      } else {
+        return self.ready.then(function() {
+          return self._clear();
+        });
+      }
+    },
+
+    _clear: function() {
+      var self = this;
+      var storeName = self.storeName;
+      var transaction = self.db.transaction([storeName], 'readwrite');
+      var store = transaction.objectStore(storeName);
+      return wrap(store.clear());
+    }
+        
   };
 
 
@@ -142,6 +192,12 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
 
   StoragePrototype.remove = function (key) {
     return this.storage.remove(key);
+  };
+  StoragePrototype.getAll = function (key) {
+    return this.storage.getAll();
+  };
+  StoragePrototype.clear = function (key) {
+    return this.storage.clear();
   };
 
   document.registerElement('key-value', {
