@@ -55,15 +55,20 @@
       return t.objectStore(self.storeName);
     }, 
 
-    get: function (key) {
+    _awaitReady: function(fn, args) {
       var self = this;
       if (self._ready) {
-        return self._get(key);
+        return fn.apply(self, args);
       } else {
         return self.ready.then(function() {
-          return self._get(key);
-        });
+          return fn.apply(self, args);
+        })
       }
+    },
+
+    get: function (key) {
+      var self = this;
+      return self._awaitReady(self._get,[key]);
     },
 
     _get: function (key) {
@@ -78,13 +83,7 @@
 
     set: function (key, value) {
       var self = this;
-      if (self._ready) {
-        return self._set(key, value);
-      } else {
-        return self.ready.then(function() {
-          return self._set(key, value);
-        });
-      }
+      return self._awaitReady(self._set,[key,value]);
     },
 
     _set: function (key, value) {
@@ -95,13 +94,7 @@
 
     remove: function (key) {
       var self = this;
-      if (self._ready) {
-        return self._remove(key);
-      } else {
-        return self.ready.then(function() {
-          return self._remove(key);
-        });
-      }
+      return self._awaitReady(self._remove,[key]);
     },
 
     _remove: function (key) {
@@ -112,13 +105,7 @@
 
     getAll: function() {
       var self = this;
-      if (self._ready) {
-        return self._getAll();
-      } else {
-        return self.ready.then(function() {
-          return self._getAll();
-        });
-      }
+      return self._awaitReady(self._getAll);
     },
 
     _getAll: function() {
@@ -139,15 +126,20 @@
       });
     },
 
+    size: function() {
+      var self = this;
+      return self._awaitReady(self._size);
+    },
+
+    _size: function() {
+      var self = this;
+      var store = self._getObjectStore();
+      return wrap(store.count());
+    },
+
     clear: function () {
       var self = this;
-      if (self._ready) {
-        return self._clear();
-      } else {
-        return self.ready.then(function() {
-          return self._clear();
-        });
-      }
+      return self._awaitReady(self._clear);
     },
 
     _clear: function() {
@@ -191,6 +183,9 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
   };
   StoragePrototype.getAll = function (key) {
     return this.storage.getAll();
+  };
+  StoragePrototype.size = function (key) {
+    return this.storage.size();
   };
   StoragePrototype.clear = function (key) {
     return this.storage.clear();
