@@ -38,8 +38,8 @@
       };
       req.onupgradeneeded = function (e) {
         self.db = req.result;
-        var store = self.db.createObjectStore(self.storeName, {keyPath: 'key'});
-        store.createIndex('insertionTime', 'insertionTime');
+        var store = self.db.createObjectStore(self.storeName, {keyPath: "id", autoIncrement: true});
+        store.createIndex('key', 'key', {unique: true});
         store.createIndex('value', 'value');
         resolve(self);
       };
@@ -88,9 +88,10 @@
 
     _get: function (key) {
       var self = this;
-      var store = self._getObjectStore()
+      var store = self._getObjectStore();
+      var index = store.index("key");
       return new Promise(function (resolve, reject) {
-        wrap(store.get(key)).then(function(row) {
+        wrap(index.get(key)).then(function(row) {
           resolve(row ? row.value : undefined);
         }, reject);
       });
@@ -109,12 +110,19 @@
 
     _set: function (key, value) {
       var self = this;
-      var store = self._getObjectStore('readwrite');
-      return wrap(store.put({
-        'key': key,
-        'value': value,
-        'insertionTime': Date.now()
-      }));
+      var store = self._getObjectStore();
+      var index = store.index("key");
+      return new Promise(function (resolve, reject){
+        wrap(index.get(key)).then(function(res){
+          store = self._getObjectStore('readwrite');
+          var item = {
+            'key': key,
+            'value': value,
+          }
+          if (res) { item.id = res.id }
+          resolve(wrap(store.put(item)));            
+        });
+      });
     },
 
     /**
@@ -130,7 +138,8 @@
     _remove: function (key) {
       var self = this;
       var store = self._getObjectStore('readwrite');
-      return wrap(store.delete(key));
+      var index = store.index("key");
+      return wrap(index.delete(key));
     },
 
     /**
@@ -140,19 +149,16 @@
      * @param  {boolean} [reverse=false] Reverse the order of the results.
      * @return {promise}
      */
-    getAll: function(orderBy, reverse) {
+    getAll: function(options) {
       var self = this;
       return self._awaitReady(self._getAll, arguments);
     },
 
-    _getAll: function(orderBy, reverse) {
+    _getAll: function(options) {
       var self = this;
       return new Promise(function (resolve,reject) {
-        // Get all entries by calling _getRange with the count of all 
-        // database entries.
-        self._size().then(function(e){
-          resolve(self._getRange(e,orderBy,null,reverse));
-        });
+        // Get all entries by calling _getRange
+        resolve(self._getRange(options));
       });
     },
 
@@ -166,20 +172,23 @@
      * @param  {boolean} [reverse=false] Reverse the order of the results.
      * @return {promise}
      */
-    getRange: function(count, orderBy, start, reverse) {
+    getRange: function(options) {
       var self = this;
       return self._awaitReady(self._getRange, arguments);
     },
 
-    _getRange: function(count, orderBy, start, reverse) {
+    _getRange: function(options) {
+      options = options || {};
       var self = this;
       var store = self._getObjectStore();
       var allItems = [];
       var counter = 0;
-      var lowerBound = start ? IDBKeyRange.lowerBound(start) : null;
-      var direction = reverse ? 'prev' : 'next';
+      var orderBy = options.orderBy || 'key';
+      var lowerBound = options.start ? IDBKeyRange.lowerBound(options.start) : null;
+      var direction = options.reverse ? 'prev' : 'next';
+      var count = options.count || undefined;
       return new Promise(function(resolve,reject){
-        if (orderBy === 'value' || orderBy === 'insertionTime') {
+        if (orderBy === 'value' || orderBy === 'key') {
           var index = store.index(orderBy);
           var cursorRequest = index.openCursor(lowerBound, direction);          
         } else {
@@ -187,7 +196,8 @@
         }
         cursorRequest.onsuccess = function(e){
           var cursor = e.target.result;
-          if (cursor === null || cursor === undefined || counter >= count) {
+          if (cursor === null || cursor === undefined 
+              || (counter !== undefined && counter >= count)) {
             resolve(allItems);
           } else {
             allItems.push(cursor.value);
@@ -196,6 +206,7 @@
           }
         }
       });
+
     },
 
     /**
@@ -252,8 +263,8 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
   StoragePrototype.remove = function (key) {
     return this.storage.remove(key);
   };
-  StoragePrototype.getAll = function (orderBy, reverse) {
-    return this.storage.getAll(orderBy, reverse);
+  StoragePrototype.getAll = function (options) {
+    return this.storage.getAll(options);
   };
   StoragePrototype.size = function (key) {
     return this.storage.size();
@@ -261,8 +272,8 @@ var StoragePrototype = Object.create(HTMLElement.prototype);
   StoragePrototype.clear = function (key) {
     return this.storage.clear();
   };
-  StoragePrototype.getRange = function (count, orderBy, start, reverse) {
-    return this.storage.getRange(count, orderBy, start, reverse);
+  StoragePrototype.getRange = function (options) {
+    return this.storage.getRange(options);
   };
 
   document.registerElement('key-value', {
